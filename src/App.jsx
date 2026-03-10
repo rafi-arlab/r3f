@@ -6,19 +6,16 @@ import { FaceControlledOrbit } from './FaceControlledOrbit';
 import { GradientShaderMaterial } from './GradientShader';
 import { ExplodingModel } from './ExplodingModel';
 import { KeyboardMovement } from './KeyboardMovement';
-import { SprintBlur } from './SprintBlur';
 
 const keyboardMap = [
   { name: 'forward', keys: ['KeyW'] },
   { name: 'backward', keys: ['KeyS'] },
   { name: 'left', keys: ['KeyA'] },
-  { name: 'right', keys: ['KeyD'] },
-  { name: 'sprint', keys: ['ShiftLeft', 'ShiftRight'] }
+  { name: 'right', keys: ['KeyD'] }
 ];
 
 function App() {
   const controlsRef = useRef();
-  const sprintBlurRef = useRef(0);
 
   const { useFaceTracking } = useControls('Camera', {
     useFaceTracking: {
@@ -36,8 +33,7 @@ function App() {
     </GizmoHelper>
     <gridHelper args={[20, 20, 0xff22aa, 0x55ccff]} />
     {useFaceTracking ? <FaceControlledOrbit controlsRef={controlsRef} /> : <OrbitControls ref={controlsRef} />}
-    <KeyboardMovement controlsRef={controlsRef} sprintBlurRef={sprintBlurRef} />
-    <SprintBlur sprintBlurRef={sprintBlurRef} />
+    <KeyboardMovement controlsRef={controlsRef} />
     <ExplodingModel />
     
     {/* Simple box with gradient shader - try changing the colors! */}
