@@ -1,12 +1,15 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, GizmoHelper, GizmoViewport } from '@react-three/drei';
 import { useControls } from 'leva';
 import { FaceControlledOrbit } from './FaceControlledOrbit';
 import { Cup } from './Cup';
+import { RoomWallPictures } from './RoomWallPictures';
+import { IntroLogic } from './IntroLogic';
 
 function App() {
   const controlsRef = useRef();
+  const [introDone, setIntroDone] = useState(false);
 
   const { useFaceTracking } = useControls('Camera', {
     useFaceTracking: {
@@ -25,28 +28,14 @@ function App() {
         {useFaceTracking ? (
           <FaceControlledOrbit controlsRef={controlsRef} />
         ) : (
-          <OrbitControls ref={controlsRef} />
+          <>
+            <OrbitControls ref={controlsRef} enabled={introDone} />
+            {!introDone && <IntroLogic controlsRef={controlsRef} onDone={() => setIntroDone(true)} />}
+          </>
         )}
 
-        {/* Room around the cup */}
-        <group position={[0, 0, -1]} name="room">
-          <mesh name="left wall" position={[-2, 0, -1.25]} castShadow receiveShadow>
-            <boxGeometry args={[0.1, 4, 8]} />
-            <meshStandardMaterial color={0x2d4a2d} />
-          </mesh>
-          <mesh name="right wall" position={[2, 0, -1.25]} castShadow receiveShadow>
-            <boxGeometry args={[0.1, 4, 8]} />
-            <meshStandardMaterial color={0x2d4a2d} />
-          </mesh>
-          <mesh name="bottom wall" position={[0, -2, -1.25]} castShadow receiveShadow>
-            <boxGeometry args={[4, 0.1, 8]} />
-            <meshStandardMaterial color={0xd4c4a8} />
-          </mesh>
-          <mesh name="top wall" position={[0, 2, -1.25]} castShadow receiveShadow>
-            <boxGeometry args={[4, 0.1, 8]} />
-            <meshStandardMaterial color={0xd4c4a8} />
-          </mesh>
-        </group>
+        {/* Room walls (all four with texture) */}
+        <RoomWallPictures />
 
         <Cup />
 
