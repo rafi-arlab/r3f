@@ -4,12 +4,16 @@ import { useGLTF } from '@react-three/drei';
 const MODEL_URL = '/models/Starbuck.glb';
 useGLTF.preload(MODEL_URL);
 
-// Cup transform — change these to adjust size, position, and rotation
+// Cup transform — change these to adjust position and rotation; scale can be driven by hand distance
 const CUP_POSITION = [0, -1, 0];
-const CUP_SCALE = 15;
-const CUP_ROTATION = [0, -90.7, 0]; // [x, y, z] in radians (e.g. [0, Math.PI / 4, 0] = 45° around Y)
+const CUP_ROTATION = [-0.2, -90.7, 0.1]; // [x, y, z] in radians (e.g. [0, Math.PI / 4, 0] = 45° around Y)
 
-export function Cup() {
+/** Default scale when hand distance is not available */
+const DEFAULT_SCALE = 10;
+
+export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0 }) {
+  const scale = scaleProp ?? DEFAULT_SCALE;
+  const rotationY = rotationYProp ?? 0;
   const { scene } = useGLTF(MODEL_URL);
   const cloned = useMemo(() => {
     const s = scene.clone();
@@ -29,12 +33,14 @@ export function Cup() {
     return s;
   }, [scene]);
 
+  const rotation = [CUP_ROTATION[0], CUP_ROTATION[1] + rotationY, CUP_ROTATION[2]];
+
   return (
     <primitive
       object={cloned}
       position={CUP_POSITION}
-      scale={CUP_SCALE}
-      rotation={CUP_ROTATION}
+      scale={scale}
+      rotation={rotation}
       castShadow
       receiveShadow
     />

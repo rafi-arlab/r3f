@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
-const INTRO_WAIT = 3;
+const DELAY_AFTER_TAP = 1.5;   // seconds to wait after tap before zoom starts
 const INTRO_ZOOM_DURATION = 2;
 const ZOOM_FACTOR = 0.65;
 
@@ -10,12 +10,13 @@ function smoothstep(t) {
   return x * x * (3 - 2 * x);
 }
 
-export function IntroLogic({ controlsRef, onDone }) {
+export function IntroLogic({ controlsRef, tapped, onDone }) {
   const { camera } = useThree();
   const startPos = useRef(null);
   const startTarget = useRef(null);
   const endPos = useRef(null);
   const doneFired = useRef(false);
+  const tapTimeRef = useRef(null);
 
   useFrame((state) => {
     const t = state.clock.elapsedTime;
@@ -31,14 +32,19 @@ export function IntroLogic({ controlsRef, onDone }) {
       endPos.current = startTarget.current.clone().add(dir.multiplyScalar(ZOOM_FACTOR));
     }
 
-    if (t < INTRO_WAIT) {
+    if (tapped && tapTimeRef.current === null) {
+      tapTimeRef.current = t;
+    }
+    const zoomStartTime = tapTimeRef.current !== null ? tapTimeRef.current + DELAY_AFTER_TAP : Infinity;
+
+    if (t < zoomStartTime) {
       camera.position.copy(startPos.current);
       controls.target.copy(startTarget.current);
       controls.update?.();
       return;
     }
 
-    const zoomT = (t - INTRO_WAIT) / INTRO_ZOOM_DURATION;
+    const zoomT = (t - zoomStartTime) / INTRO_ZOOM_DURATION;
     if (zoomT >= 1) {
       camera.position.copy(endPos.current);
       controls.target.copy(startTarget.current);

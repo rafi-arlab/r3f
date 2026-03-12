@@ -11,10 +11,10 @@ export function FaceControlledOrbit({ controlsRef: externalControlsRef }) {
   useFrame(() => {
     if (!controlsRef.current || !isReady) return;
 
-    const targetAzimuth = facePosition.x * Math.PI * 0.1;
+    const targetAzimuth = facePosition.x * Math.PI * 0.2;
     const targetPolar = (Math.PI / 2) + (facePosition.y * Math.PI * 0.05);
 
-    const dampingFactor = 0.25;
+    const dampingFactor = 0.8;
     
     controlsRef.current.setAzimuthalAngle(
       controlsRef.current.getAzimuthalAngle() + 
