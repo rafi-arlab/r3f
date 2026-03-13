@@ -6,6 +6,7 @@ import { Cup } from './Cup';
 import { RoomWallPictures } from './RoomWallPictures';
 import { IntroLogic } from './IntroLogic';
 import { GateDoors } from './GateDoors';
+import { CupGlowParticles } from './CupGlowParticles';
 import { useHandDistance } from './useHandDistance';
 
 function App() {
@@ -14,25 +15,13 @@ function App() {
   const [introTapped, setIntroTapped] = useState(false);
   const [hintsVisible, setHintsVisible] = useState(true);
 
-  const { pinchSize, rotationY } = useHandDistance({ enabled: introDone });
+  const { rotationY } = useHandDistance({ enabled: introDone });
 
-  // Fade out the "look around / rotate / pinch" hint after a few seconds
   useEffect(() => {
     if (!introDone) return;
     const t = setTimeout(() => setHintsVisible(false), 6000);
     return () => clearTimeout(t);
   }, [introDone]);
-
-  // Map pinch (thumb–index distance, normalized) to cup scale between 5 and 15
-  const cupScale = (() => {
-    const MIN_SCALE = 5;
-    const MAX_SCALE = 15;
-    const PINCH_MIN = 0.02;
-    const PINCH_MAX = 0.18;
-    if (pinchSize == null) return 10;
-    const t = (pinchSize - PINCH_MIN) / (PINCH_MAX - PINCH_MIN);
-    return Math.min(MAX_SCALE, Math.max(MIN_SCALE, MIN_SCALE + t * (MAX_SCALE - MIN_SCALE)));
-  })();
 
   return (
     <div id="canvas-container" className="canvas-wrapper" onClick={() => !introDone && setIntroTapped(true)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && !introDone && setIntroTapped(true)}>
@@ -46,7 +35,7 @@ function App() {
         )}
         {introDone && (
           <p className={`hint hint--controls ${hintsVisible ? '' : 'hint--faded'}`}>
-            Move your face to look around · Swipe to rotate the cup · Pinch to resize
+            Move your face to look around · Swipe to rotate the cup
           </p>
         )}
       </div>
@@ -67,7 +56,8 @@ function App() {
         {/* Room walls (all four with texture) */}
         <RoomWallPictures />
 
-        <Cup scale={cupScale} rotationY={rotationY} />
+        <Cup scale={13} rotationY={rotationY} />
+        <CupGlowParticles />
 
         {/* Gate doors — closed at start, swing open on tap */}
         <GateDoors open={introTapped} />

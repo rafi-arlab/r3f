@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 const GATE_Z = 1.5;
 const DOOR_WIDTH = 2;
 const DOOR_HEIGHT = 4;
-const DOOR_DEPTH = 0.51;
+const DOOR_DEPTH = 0.15;
 const OPEN_DURATION = 1.2;
 // Hinge on outer edge (at the wall). Doors swing onto the walls, not into the center.
 const LEFT_OPEN_ANGLE = -Math.PI / 2;
