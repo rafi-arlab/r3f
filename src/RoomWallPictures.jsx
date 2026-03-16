@@ -1,11 +1,8 @@
-import { Suspense } from 'react';
-
 const SBUX_GREEN = '#00704a';
-
 const ROOM_GROUP_POSITION = [0, 0, 1.5];
 const WALL_CENTER_Z = -1.25;
 
-function StarbucksRoom() {
+export function RoomWallPictures() {
   return (
     <group position={ROOM_GROUP_POSITION} name="room">
       <mesh name="left wall" position={[-2, 0, WALL_CENTER_Z]} castShadow receiveShadow>
@@ -25,13 +22,5 @@ function StarbucksRoom() {
         <meshStandardMaterial color={SBUX_GREEN} roughness={0.9} metalness={0} />
       </mesh>
     </group>
-  );
-}
-
-export function RoomWallPictures() {
-  return (
-    <Suspense fallback={null}>
-      <StarbucksRoom />
-    </Suspense>
   );
 }

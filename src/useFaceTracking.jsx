@@ -7,6 +7,8 @@ export function useFaceTracking() {
   const videoRef = useRef(null);
   const faceDetectorRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const frameCountRef = useRef(0);
+  const PROCESS_EVERY_N_FRAMES = 2;
 
   useEffect(() => {
     let video;
@@ -30,7 +32,7 @@ export function useFaceTracking() {
         videoRef.current = video;
         document.body.appendChild(video);
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 }
+          video: { width: 320, height: 240 }
         });
         video.srcObject = stream;
         await new Promise((resolve) => {
@@ -41,7 +43,6 @@ export function useFaceTracking() {
         if (video.videoWidth === 0 || video.videoHeight === 0) {
           throw new Error('Video dimensions are invalid');
         }
-        console.log(`Video ready: ${video.videoWidth}x${video.videoHeight}`);
         setIsReady(true);
         setTimeout(() => detectFace(), 100);
       } catch (error) {
@@ -57,8 +58,13 @@ export function useFaceTracking() {
         return;
       }
 
+      frameCountRef.current += 1;
       const startTimeMs = performance.now();
       try {
+        if (frameCountRef.current % PROCESS_EVERY_N_FRAMES !== 0) {
+          animationFrameRef.current = requestAnimationFrame(detectFace);
+          return;
+        }
         const detections = faceDetectorRef.current.detectForVideo(video, startTimeMs);
 
         if (detections.detections && detections.detections.length > 0) {

@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
+import { Lid } from './Lid';
 
-const MODEL_URL = '/models/Starbuck.glb';
+const MODEL_URL = '/models/cupnolid.glb';
 useGLTF.preload(MODEL_URL);
 
-const CUP_POSITION = [0, -1, 0];
+const CUP_POSITION = [0, -0.88, 0];
 const CUP_ROTATION = [-0.2, -90.7, 0.1];
 
 const DEFAULT_SCALE = 10;
@@ -15,7 +16,7 @@ const DURATION_SHRINK = 0.2;
 const DURATION_JUMP = 0.5;
 const DURATION_LAND = 0.5;
 const JUMP_TOTAL = DURATION_SHRINK + DURATION_JUMP + DURATION_LAND;
-const JUMP_HEIGHT = 1.0;
+const JUMP_HEIGHT = 0.55;
 const SHRINK_SCALE = 9;
 const TWO_PI = Math.PI * 2;
 
@@ -23,7 +24,7 @@ function easeOutQuad(t) {
   return 1 - (1 - t) * (1 - t);
 }
 
-export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0, swipeTrigger = 0, addRotation }) {
+export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0, swipeTrigger = 0, addRotation, isPouring = false }) {
   const scale = scaleProp ?? DEFAULT_SCALE;
   const rotationY = rotationYProp ?? 0;
   const [animating, setAnimating] = useState(false);
@@ -96,6 +97,7 @@ export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0, swipeTrigg
   return (
     <group ref={groupRef} position={CUP_POSITION} scale={scale} rotation={rotation}>
       <primitive object={cloned} castShadow receiveShadow />
+      <Lid isPouring={isPouring} attached />
     </group>
   );
 }

@@ -2,7 +2,9 @@ import { useRef } from 'react';
 import { OrbitControls } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import { useFaceTracking } from './useFaceTracking';
+
+// Tilt view higher (lower polar = camera more from above). Add more to raise the default angle.
+const POLAR_OFFSET = 0.1;
 
 /**
  * Sync orbit internal spherical angles from current camera position and target.
@@ -20,11 +22,10 @@ function syncOrbitAnglesFromCamera(controls, camera) {
   controls.setPolarAngle(polar);
 }
 
-export function FaceControlledOrbit({ controlsRef: externalControlsRef }) {
+export function FaceControlledOrbit({ controlsRef: externalControlsRef, facePosition, isReady }) {
   const internalControlsRef = useRef();
   const controlsRef = externalControlsRef ?? internalControlsRef;
   const { camera } = useThree();
-  const { facePosition, isReady } = useFaceTracking();
   const hasSyncedRef = useRef(false);
 
   useFrame(() => {
@@ -37,7 +38,7 @@ export function FaceControlledOrbit({ controlsRef: externalControlsRef }) {
     }
 
     const targetAzimuth = facePosition.x * Math.PI * 0.2;
-    const targetPolar = (Math.PI / 2) + (facePosition.y * Math.PI * 0.05);
+    const targetPolar = (Math.PI / 2) + (facePosition.y * Math.PI * 0.05) - POLAR_OFFSET;
     const dampingFactor = 0.8;
 
     controlsRef.current.setAzimuthalAngle(

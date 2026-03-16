@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 
 const DELAY_AFTER_TAP = 1.5;
 const INTRO_ZOOM_DURATION = 2;
-const ZOOM_FACTOR = 0.65;
+const ZOOM_FACTOR = 0.5
 
 function smoothstep(t) {
   const x = Math.max(0, Math.min(1, t));
