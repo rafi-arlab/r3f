@@ -1,62 +1,77 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
 
 const MODEL_URL = '/models/Starbuck.glb';
 useGLTF.preload(MODEL_URL);
 
-// Cup transform — change these to adjust position and rotation; scale can be driven by hand distance
 const CUP_POSITION = [0, -1, 0];
-const CUP_ROTATION = [-0.2, -90.7, 0.1]; // [x, y, z] in radians (e.g. [0, Math.PI / 4, 0] = 45° around Y)
+const CUP_ROTATION = [-0.2, -90.7, 0.1];
 
-/** Default scale when hand distance is not available */
 const DEFAULT_SCALE = 10;
 
-const RIM_VERTEX = `
-  varying vec3 vNormal;
-  varying vec3 vViewPosition;
-  void main() {
-    vNormal = normalize(normalMatrix * normal);
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    vViewPosition = -mvPosition.xyz;
-    gl_Position = projectionMatrix * mvPosition;
-  }
-`;
+// Jump animation: shrink -> jump up + scale up + 360° -> land
+const DURATION_SHRINK = 0.2;
+const DURATION_JUMP = 0.5;
+const DURATION_LAND = 0.5;
+const JUMP_TOTAL = DURATION_SHRINK + DURATION_JUMP + DURATION_LAND;
+const JUMP_HEIGHT = 1.0;
+const SHRINK_SCALE = 9;
+const TWO_PI = Math.PI * 2;
 
-const RIM_FRAGMENT = `
-  uniform vec3 rimColor;
-  uniform float rimPower;
-  uniform float rimStrength;
-  varying vec3 vNormal;
-  varying vec3 vViewPosition;
-  void main() {
-    vec3 viewDir = normalize(vViewPosition);
-    float rim = pow(1.0 - max(dot(vNormal, viewDir), 0.0), rimPower);
-    rim *= rimStrength;
-    gl_FragColor = vec4(rimColor, rim);
-  }
-`;
-
-function createRimMaterial() {
-  return new THREE.ShaderMaterial({
-    uniforms: {
-      rimColor: { value: new THREE.Color(1.0, 0.88, 0.65) },
-      rimPower: { value: 2.8 },
-      rimStrength: { value: 0.45 }
-    },
-    vertexShader: RIM_VERTEX,
-    fragmentShader: RIM_FRAGMENT,
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide
-  });
+function easeOutQuad(t) {
+  return 1 - (1 - t) * (1 - t);
 }
 
-export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0 }) {
+export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0, swipeTrigger = 0, addRotation }) {
   const scale = scaleProp ?? DEFAULT_SCALE;
   const rotationY = rotationYProp ?? 0;
+  const [animating, setAnimating] = useState(false);
+  const animTimeRef = useRef(0);
+  const addRotationRef = useRef(addRotation);
+  addRotationRef.current = addRotation;
   const { scene } = useGLTF(MODEL_URL);
+
+  useEffect(() => {
+    if (swipeTrigger > 0) {
+      setAnimating(true);
+      animTimeRef.current = 0;
+    }
+  }, [swipeTrigger]);
+
+  const groupRef = useRef();
+
+  useFrame((_state, delta) => {
+    if (!animating || !groupRef.current) return;
+    animTimeRef.current += delta;
+    const t = animTimeRef.current;
+
+    if (t >= JUMP_TOTAL) {
+      groupRef.current.position.y = CUP_POSITION[1];
+      groupRef.current.scale.setScalar(scale);
+      addRotationRef.current?.(TWO_PI);
+      setAnimating(false);
+      return;
+    }
+
+    let animY = 0, animScale = scale, animRot = 0;
+    if (t < DURATION_SHRINK) {
+      const u = t / DURATION_SHRINK;
+      animScale = scale + (SHRINK_SCALE - scale) * u;
+    } else if (t < DURATION_SHRINK + DURATION_JUMP) {
+      const u = (t - DURATION_SHRINK) / DURATION_JUMP;
+      animY = JUMP_HEIGHT * easeOutQuad(u);
+      animScale = SHRINK_SCALE + (scale - SHRINK_SCALE) * u;
+      animRot = TWO_PI * u;
+    } else {
+      const u = (t - DURATION_SHRINK - DURATION_JUMP) / DURATION_LAND;
+      animY = JUMP_HEIGHT * (1 - u);
+      animRot = TWO_PI;
+    }
+    groupRef.current.position.y = CUP_POSITION[1] + animY;
+    groupRef.current.scale.setScalar(animScale);
+    groupRef.current.rotation.y = CUP_ROTATION[1] + rotationY + animRot;
+  });
 
   const cloned = useMemo(() => {
     const s = scene.clone();
@@ -76,27 +91,11 @@ export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0 }) {
     return s;
   }, [scene]);
 
-  const rimClone = useMemo(() => {
-    const s = scene.clone();
-    const rimMat = createRimMaterial();
-    s.traverse((child) => {
-      if (child.isMesh) {
-        child.castShadow = false;
-        child.receiveShadow = false;
-        child.material = rimMat;
-      }
-    });
-    return s;
-  }, [scene]);
-
   const rotation = [CUP_ROTATION[0], CUP_ROTATION[1] + rotationY, CUP_ROTATION[2]];
 
   return (
-    <group position={CUP_POSITION} scale={scale} rotation={rotation}>
+    <group ref={groupRef} position={CUP_POSITION} scale={scale} rotation={rotation}>
       <primitive object={cloned} castShadow receiveShadow />
-      <group scale={[1, 1, 1]}>
-        <primitive object={rimClone} />
-      </group>
     </group>
   );
 }

@@ -5,20 +5,26 @@ const HAND_LANDMARKER_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
 const WRIST_INDEX = 0;
-const SWIPE_SENSITIVITY = 4;
+const SWIPE_THRESHOLD = 0.05;
+const SWIPE_COOLDOWN_MS = 400;
 
 /**
- * Hook that runs hand detection and exposes swipe-driven cup rotation.
- * @param {{ enabled?: boolean }} options - Set enabled to false to pause detection.
- * @returns {{ rotationY: number }} rotationY in radians (cumulative).
+ * Hook that runs hand detection and fires onSwipe when a swipe is detected.
+ * Returns rotationY (persistent) and addRotation so the jump animation can add 360° when it completes.
  */
 export function useHandDistance(options = {}) {
-  const { enabled = true } = options;
+  const { enabled = true, onSwipe } = options;
   const [rotationY, setRotationY] = useState(0);
   const videoRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const animationFrameRef = useRef(null);
   const lastCenterXRef = useRef(null);
+  const accumulatedRef = useRef(0);
+  const lastSwipeTimeRef = useRef(0);
+  const onSwipeRef = useRef(onSwipe);
+  onSwipeRef.current = onSwipe;
+
+  const addRotation = (delta) => setRotationY((r) => r + delta);
 
   useEffect(() => {
     if (!enabled) return;
@@ -84,13 +90,31 @@ export function useHandDistance(options = {}) {
           if (wrists.length > 0) {
             const centerX = wrists.reduce((s, w) => s + w.x, 0) / wrists.length;
             const prevX = lastCenterXRef.current;
-            if (prevX !== null) {
-              setRotationY((r) => r + (centerX - prevX) * SWIPE_SENSITIVITY);
+            const now = Date.now();
+            const inCooldown = now - lastSwipeTimeRef.current < SWIPE_COOLDOWN_MS;
+
+            if (prevX !== null && !inCooldown) {
+              const deltaX = centerX - prevX;
+              accumulatedRef.current += deltaX;
+
+              if (accumulatedRef.current >= SWIPE_THRESHOLD) {
+                accumulatedRef.current = 0;
+                lastSwipeTimeRef.current = now;
+                onSwipeRef.current?.();
+              } else if (accumulatedRef.current <= -SWIPE_THRESHOLD) {
+                accumulatedRef.current = 0;
+                lastSwipeTimeRef.current = now;
+                onSwipeRef.current?.();
+              }
+            } else if (inCooldown) {
+              accumulatedRef.current = 0;
             }
+
             lastCenterXRef.current = centerX;
           }
         } else {
           lastCenterXRef.current = null;
+          accumulatedRef.current = 0;
         }
       } catch (error) {
         console.error('Hand detection error:', error);
@@ -111,5 +135,5 @@ export function useHandDistance(options = {}) {
     };
   }, [enabled]);
 
-  return { rotationY };
+  return { rotationY, addRotation };
 }

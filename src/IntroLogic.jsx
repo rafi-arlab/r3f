@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
-const DELAY_AFTER_TAP = 1.5;   // seconds to wait after tap before zoom starts
+const DELAY_AFTER_TAP = 1.5;
 const INTRO_ZOOM_DURATION = 2;
 const ZOOM_FACTOR = 0.65;
 
