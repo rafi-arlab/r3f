@@ -11,7 +11,7 @@ const LIFT_OFFSET = 0.4;
 const RIGHT_OFFSET = 0.28;
 const OPEN_ROTATION_Y = -0.55;
 const OPEN_TILT_Z = 0.45;
-const LERP_SPEED = 4;
+const LERP_SPEED = 9;
 
 // When attached to cup (child): position/offsets in cup local space (parent scale = 13)
 const INV_SCALE = 1 / 13;

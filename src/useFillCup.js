@@ -4,9 +4,13 @@ const POUR_DURATION_MS = 4000;
 
 /**
  * Fill-cup logic: start pour on demand, stop after a few seconds.
- * Returns { isPouring, startFill }.
+ * Calls onPourComplete when the pour finishes. Returns { isPouring, startFill }.
  */
-export function useFillCup() {
+export function useFillCup(options = {}) {
+  const { onPourComplete } = options;
+  const onPourCompleteRef = useRef(onPourComplete);
+  onPourCompleteRef.current = onPourComplete;
+
   const [isPouring, setIsPouring] = useState(false);
   const timeoutRef = useRef(null);
 
@@ -17,6 +21,7 @@ export function useFillCup() {
     timeoutRef.current = setTimeout(() => {
       setIsPouring(false);
       timeoutRef.current = null;
+      onPourCompleteRef.current?.();
     }, POUR_DURATION_MS);
   }, [isPouring]);
 

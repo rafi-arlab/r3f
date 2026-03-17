@@ -52,5 +52,5 @@ export function FaceControlledOrbit({ controlsRef: externalControlsRef, facePosi
     controlsRef.current.update();
   });
 
-  return <OrbitControls ref={controlsRef} enableZoom={true} enablePan={false} />;
+  return <OrbitControls ref={controlsRef} enableZoom={false} enablePan={false} />;
 }

@@ -5,28 +5,18 @@ const HAND_LANDMARKER_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
 const WRIST_INDEX = 0;
-const SWIPE_COOLDOWN_MS = 2000;
-const CENTER_X_MIN = 0.2;
-const CENTER_X_MAX = 0.8;
-const FRAMES_IN_CENTER_REQUIRED = 2;
+// Remap Y so physical top (where detection often fails) isn't required: physical [Y_TOP_MARGIN, 1] -> [0, 1]
+const Y_TOP_MARGIN = 0.12;
 
 /**
- * Fires onSwipe when the user's hand is in the center zone (X). Y not used.
- * Returns rotationY and addRotation for cup spin.
+ * Hand tracking: returns handPositions (wrist { x, y } per hand, normalized 0-1). Y remapped so top is reachable without hand at frame top.
  */
 export function useHandCenterTrigger(options = {}) {
-  const { enabled = true, onSwipe } = options;
-  const [rotationY, setRotationY] = useState(0);
+  const { enabled = true } = options;
+  const [handPositions, setHandPositions] = useState([]);
   const videoRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const animationFrameRef = useRef(null);
-  const lastSwipeTimeRef = useRef(0);
-  const consecutiveCenterFramesRef = useRef(0);
-  const handHasLeftCenterRef = useRef(true);
-  const onSwipeRef = useRef(onSwipe);
-  onSwipeRef.current = onSwipe;
-
-  const addRotation = (delta) => setRotationY((r) => r + delta);
 
   useEffect(() => {
     if (!enabled) return;
@@ -88,40 +78,21 @@ export function useHandCenterTrigger(options = {}) {
         const landmarks = result.landmarks ?? [];
 
         if (landmarks.length >= 1) {
-          const wrists = landmarks.slice(0, 2).map((hand) => hand[WRIST_INDEX]).filter(Boolean);
-          if (wrists.length > 0) {
-            const centerX = wrists.reduce((s, w) => s + w.x, 0) / wrists.length;
-            const now = Date.now();
-            const inCooldown = now - lastSwipeTimeRef.current < SWIPE_COOLDOWN_MS;
-            const inCenterZone = centerX >= CENTER_X_MIN && centerX <= CENTER_X_MAX;
-            if (inCenterZone) {
-              consecutiveCenterFramesRef.current += 1;
-              if (
-                handHasLeftCenterRef.current &&
-                consecutiveCenterFramesRef.current >= FRAMES_IN_CENTER_REQUIRED &&
-                !inCooldown
-              ) {
-                consecutiveCenterFramesRef.current = 0;
-                handHasLeftCenterRef.current = false;
-                lastSwipeTimeRef.current = now;
-                onSwipeRef.current?.();
-              }
-            } else {
-              consecutiveCenterFramesRef.current = 0;
-              handHasLeftCenterRef.current = true;
-            }
-          } else {
-            consecutiveCenterFramesRef.current = 0;
-            handHasLeftCenterRef.current = true;
-          }
+          const positions = landmarks.map((hand) => {
+            const rawY = hand[WRIST_INDEX].y;
+            const remappedY = (rawY - Y_TOP_MARGIN) / (1 - Y_TOP_MARGIN);
+            return {
+              x: hand[WRIST_INDEX].x,
+              y: Math.max(0, Math.min(1, remappedY))
+            };
+          });
+          setHandPositions(positions);
         } else {
-          consecutiveCenterFramesRef.current = 0;
-          handHasLeftCenterRef.current = true;
+          setHandPositions([]);
         }
       } catch (error) {
         console.error('Hand detection error:', error);
       }
-
       animationFrameRef.current = requestAnimationFrame(detectHands);
     }
 
@@ -137,5 +108,5 @@ export function useHandCenterTrigger(options = {}) {
     };
   }, [enabled]);
 
-  return { rotationY, addRotation };
+  return { handPositions };
 }

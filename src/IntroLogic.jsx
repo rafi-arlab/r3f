@@ -1,8 +1,8 @@
 import { useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 
-const DELAY_AFTER_TAP = 1.5;
-const INTRO_ZOOM_DURATION = 2;
+const DELAY_AFTER_TAP = 0.6;
+const INTRO_ZOOM_DURATION = 1;
 const ZOOM_FACTOR = 0.5
 
 function smoothstep(t) {

@@ -1,4 +1,4 @@
-import { useRef, useState, Suspense } from 'react';
+import { useRef, useState, Suspense, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { FaceControlledOrbit } from './FaceControlledOrbit';
@@ -16,22 +16,40 @@ import { useHandCenterTrigger } from './useHandCenterTrigger';
 import { LiquidPour } from './LiquidPour';
 import { useFillCup } from './useFillCup';
 import { FillCupButton } from './FillCupButton';
+import { HandFollowShape } from './HandFollowShape';
+import { CoffeeBeans, TOTAL_BEANS } from './CoffeeBeans';
+import { BeanProgressBar } from './BeanProgressBar';
 
 function App() {
   const controlsRef = useRef();
   const [introDone, setIntroDone] = useState(false);
   const [introTapped, setIntroTapped] = useState(false);
-  const { isPouring, startFill } = useFillCup();
+  const [spinTrigger, setSpinTrigger] = useState(0);
+  const [rotationY, setRotationY] = useState(0);
+  const addRotation = useCallback((delta) => setRotationY((r) => r + delta), []);
+  const { isPouring, startFill } = useFillCup({
+    onPourComplete: () => setSpinTrigger((t) => t + 1)
+  });
   const faceTracking = useFaceTracking();
 
-  const [swipeTrigger, setSwipeTrigger] = useState(0);
-  const { rotationY, addRotation } = useHandCenterTrigger({
-    enabled: introDone,
-    onSwipe: () => setSwipeTrigger((t) => t + 1)
-  });
+  const [collectedBeanCount, setCollectedBeanCount] = useState(0);
+  const prevIntroDoneRef = useRef(false);
+  const { handPositions } = useHandCenterTrigger({ enabled: true });
+
+  useEffect(() => {
+    if (introDone && !prevIntroDoneRef.current) setCollectedBeanCount(0);
+    prevIntroDoneRef.current = introDone;
+  }, [introDone]);
+
+  const pourUnlocked = collectedBeanCount >= TOTAL_BEANS;
 
   return (
     <div id="canvas-container" className="canvas-wrapper" onClick={() => !introDone && setIntroTapped(true)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && !introDone && setIntroTapped(true)}>
+      <BeanProgressBar
+        visible={introDone}
+        collected={collectedBeanCount}
+        total={TOTAL_BEANS}
+      />
       <Canvas shadows>
         <SceneBackground />
         <Suspense fallback={null}>
@@ -47,11 +65,15 @@ function App() {
           </>
         )}
 
+        {handPositions.map((pos, i) => (
+          <HandFollowShape key={i} handPosition={pos} />
+        ))}
         <group scale={0.88}>
           <RoomWallPictures />
-          <FillCupButton startFill={startFill} isPouring={isPouring} visible={introDone} />
+          <CoffeeBeans handPositions={handPositions} collectedCount={collectedBeanCount} onCollect={() => setCollectedBeanCount((c) => Math.min(TOTAL_BEANS, c + 1))} />
+          <FillCupButton startFill={startFill} isPouring={isPouring} visible={introDone} disabled={!pourUnlocked} collected={collectedBeanCount} total={TOTAL_BEANS} />
           <LiquidPour isPouring={isPouring} />
-          <Cup scale={13} rotationY={rotationY} swipeTrigger={swipeTrigger} addRotation={addRotation} isPouring={isPouring} />
+          <Cup scale={13} rotationY={rotationY} swipeTrigger={spinTrigger} addRotation={addRotation} isPouring={isPouring} />
           <CupGlowParticles />
           <GateDoors open={introTapped} />
           <RoomFloor />

@@ -11,11 +11,12 @@ const CUP_ROTATION = [-0.2, -90.7, 0.1];
 
 const DEFAULT_SCALE = 10;
 
-// Jump animation: shrink -> jump up + scale up + 360° -> land
+// Jump animation: delay -> shrink -> jump up + scale up + 360° -> land
+const JUMP_DELAY = 0.45;
 const DURATION_SHRINK = 0.2;
-const DURATION_JUMP = 0.5;
-const DURATION_LAND = 0.5;
-const JUMP_TOTAL = DURATION_SHRINK + DURATION_JUMP + DURATION_LAND;
+const DURATION_JUMP = 0.55;
+const DURATION_LAND = 0.45;
+const JUMP_TOTAL = JUMP_DELAY + DURATION_SHRINK + DURATION_JUMP + DURATION_LAND;
 const JUMP_HEIGHT = 0.55;
 const SHRINK_SCALE = 9;
 const TWO_PI = Math.PI * 2;
@@ -55,17 +56,22 @@ export function Cup({ scale: scaleProp, rotationY: rotationYProp = 0, swipeTrigg
       return;
     }
 
+    const start = JUMP_DELAY;
+    const localT = t - start;
+
     let animY = 0, animScale = scale, animRot = 0;
-    if (t < DURATION_SHRINK) {
-      const u = t / DURATION_SHRINK;
+    if (localT < 0) {
+      animScale = scale;
+    } else if (localT < DURATION_SHRINK) {
+      const u = localT / DURATION_SHRINK;
       animScale = scale + (SHRINK_SCALE - scale) * u;
-    } else if (t < DURATION_SHRINK + DURATION_JUMP) {
-      const u = (t - DURATION_SHRINK) / DURATION_JUMP;
+    } else if (localT < DURATION_SHRINK + DURATION_JUMP) {
+      const u = (localT - DURATION_SHRINK) / DURATION_JUMP;
       animY = JUMP_HEIGHT * easeOutQuad(u);
       animScale = SHRINK_SCALE + (scale - SHRINK_SCALE) * u;
       animRot = TWO_PI * u;
     } else {
-      const u = (t - DURATION_SHRINK - DURATION_JUMP) / DURATION_LAND;
+      const u = (localT - DURATION_SHRINK - DURATION_JUMP) / DURATION_LAND;
       animY = JUMP_HEIGHT * (1 - u);
       animRot = TWO_PI;
     }
