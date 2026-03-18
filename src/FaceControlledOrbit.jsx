@@ -5,11 +5,9 @@ import * as THREE from 'three';
 
 // Tilt view higher (lower polar = camera more from above). Add more to raise the default angle.
 const POLAR_OFFSET = 0.1;
+const MAX_AZIMUTH = 0.35;
 
-/**
- * Sync orbit internal spherical angles from current camera position and target.
- * The zoom sets position/target directly, so orbit's angles are stale and would cause a jump.
- */
+/** Sync orbit internal spherical angles from current camera position and target. */
 function syncOrbitAnglesFromCamera(controls, camera) {
   const delta = new THREE.Vector3()
     .copy(camera.position)
@@ -31,15 +29,16 @@ export function FaceControlledOrbit({ controlsRef: externalControlsRef, facePosi
   useFrame(() => {
     if (!controlsRef.current || !isReady) return;
 
-    // First frame after intro: orbit angles are from pre-zoom; sync from actual camera/target so no jump
+    // First frame: sync orbit angles from actual camera/target so there's no jump
     if (!hasSyncedRef.current) {
       syncOrbitAnglesFromCamera(controlsRef.current, camera);
       hasSyncedRef.current = true;
     }
 
-    const targetAzimuth = facePosition.x * Math.PI * 0.2;
+    const rawAzimuth = facePosition.x * Math.PI * 0.15;
+    const targetAzimuth = THREE.MathUtils.clamp(rawAzimuth, -MAX_AZIMUTH, MAX_AZIMUTH);
     const targetPolar = (Math.PI / 2) + (facePosition.y * Math.PI * 0.05) - POLAR_OFFSET;
-    const dampingFactor = 0.8;
+    const dampingFactor = 1;
 
     controlsRef.current.setAzimuthalAngle(
       controlsRef.current.getAzimuthalAngle() +

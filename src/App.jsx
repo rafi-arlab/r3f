@@ -1,14 +1,11 @@
-import { useRef, useState, Suspense, useEffect, useCallback } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { useRef, useState, useCallback, useMemo } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import './App.css';
 import { FaceControlledOrbit } from './FaceControlledOrbit';
 import { useFaceTracking } from './useFaceTracking';
 import { Cup } from './Cup';
 import { RoomWallPictures } from './RoomWallPictures';
-import { IntroLogic } from './IntroLogic';
-import { GateDoors } from './GateDoors';
 import { CupGlowParticles } from './CupGlowParticles';
-import { CoffeeShopBackground } from './CoffeeShopBackground';
 import { SceneBackground } from './SceneBackground';
 import { RoomFloor } from './RoomFloor';
 import { SceneLights } from './SceneLights';
@@ -18,12 +15,24 @@ import { useFillCup } from './useFillCup';
 import { FillCupButton } from './FillCupButton';
 import { HandFollowShape } from './HandFollowShape';
 import { CoffeeBeans, TOTAL_BEANS } from './CoffeeBeans';
-import { BeanProgressBar } from './BeanProgressBar';
+import { HandDebugOverlay } from './HandDebugOverlay';
+
+const BASE_SCALE = 0.88;
+const REF_WIDTH = 1024;
+const MIN_VIEWPORT_SCALE = 0.7;
+const MAX_VIEWPORT_SCALE = 1.1;
+
+function ResponsiveScene({ children }) {
+  const { size } = useThree();
+  const scale = useMemo(() => {
+    const s = Math.max(MIN_VIEWPORT_SCALE, Math.min(MAX_VIEWPORT_SCALE, size.width / REF_WIDTH));
+    return BASE_SCALE * s;
+  }, [size.width]);
+  return <group scale={[scale, scale, scale]}>{children}</group>;
+}
 
 function App() {
   const controlsRef = useRef();
-  const [introDone, setIntroDone] = useState(false);
-  const [introTapped, setIntroTapped] = useState(false);
   const [spinTrigger, setSpinTrigger] = useState(0);
   const [rotationY, setRotationY] = useState(0);
   const addRotation = useCallback((delta) => setRotationY((r) => r + delta), []);
@@ -33,54 +42,35 @@ function App() {
   const faceTracking = useFaceTracking();
 
   const [collectedBeanCount, setCollectedBeanCount] = useState(0);
-  const prevIntroDoneRef = useRef(false);
-  const { handPositions } = useHandCenterTrigger({ enabled: true });
-
-  useEffect(() => {
-    if (introDone && !prevIntroDoneRef.current) setCollectedBeanCount(0);
-    prevIntroDoneRef.current = introDone;
-  }, [introDone]);
+  const { handPositions, rawLandmarks, videoRef } = useHandCenterTrigger({ enabled: true });
 
   const pourUnlocked = collectedBeanCount >= TOTAL_BEANS;
 
   return (
-    <div id="canvas-container" className="canvas-wrapper" onClick={() => !introDone && setIntroTapped(true)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && !introDone && setIntroTapped(true)}>
-      <BeanProgressBar
-        visible={introDone}
-        collected={collectedBeanCount}
-        total={TOTAL_BEANS}
-      />
-      <Canvas shadows>
+    <>
+    <HandDebugOverlay videoRef={videoRef} rawLandmarks={rawLandmarks} />
+    <div id="canvas-container" className="canvas-wrapper">
+      <Canvas shadows camera={{ position: [0, 0, 3], fov: 50 }}>
         <SceneBackground />
-        <Suspense fallback={null}>
-          <CoffeeShopBackground visible={!introDone} />
-        </Suspense>
 
-        {introDone ? (
-          <FaceControlledOrbit controlsRef={controlsRef} facePosition={faceTracking.facePosition} isReady={faceTracking.isReady} />
-        ) : (
-          <>
-            <OrbitControls ref={controlsRef} enabled={false} />
-            <IntroLogic controlsRef={controlsRef} tapped={introTapped} onDone={() => setIntroDone(true)} />
-          </>
-        )}
+        <FaceControlledOrbit controlsRef={controlsRef} facePosition={faceTracking.facePosition} isReady={faceTracking.isReady} />
 
         {handPositions.map((pos, i) => (
           <HandFollowShape key={i} handPosition={pos} />
         ))}
-        <group scale={0.88}>
+        <ResponsiveScene>
           <RoomWallPictures />
           <CoffeeBeans handPositions={handPositions} collectedCount={collectedBeanCount} onCollect={() => setCollectedBeanCount((c) => Math.min(TOTAL_BEANS, c + 1))} />
-          <FillCupButton startFill={startFill} isPouring={isPouring} visible={introDone} disabled={!pourUnlocked} collected={collectedBeanCount} total={TOTAL_BEANS} />
+          <FillCupButton startFill={startFill} isPouring={isPouring} visible disabled={!pourUnlocked} collected={collectedBeanCount} total={TOTAL_BEANS} handPositions={handPositions} />
           <LiquidPour isPouring={isPouring} />
           <Cup scale={13} rotationY={rotationY} swipeTrigger={spinTrigger} addRotation={addRotation} isPouring={isPouring} />
           <CupGlowParticles />
-          <GateDoors open={introTapped} />
           <RoomFloor />
           <SceneLights />
-        </group>
+        </ResponsiveScene>
       </Canvas>
     </div>
+    </>
   );
 }
 

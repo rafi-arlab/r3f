@@ -4,7 +4,10 @@ import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 const HAND_LANDMARKER_MODEL =
   'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 
-const WRIST_INDEX = 0;
+const THUMB_TIP = 4;
+const INDEX_TIP = 8;
+const MIDDLE_MCP = 9;
+const PINCH_THRESHOLD = 0.12;
 // Remap Y so physical top (where detection often fails) isn't required: physical [Y_TOP_MARGIN, 1] -> [0, 1]
 const Y_TOP_MARGIN = 0.12;
 
@@ -14,6 +17,7 @@ const Y_TOP_MARGIN = 0.12;
 export function useHandCenterTrigger(options = {}) {
   const { enabled = true } = options;
   const [handPositions, setHandPositions] = useState([]);
+  const [rawLandmarks, setRawLandmarks] = useState([]);
   const videoRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -79,16 +83,22 @@ export function useHandCenterTrigger(options = {}) {
 
         if (landmarks.length >= 1) {
           const positions = landmarks.map((hand) => {
-            const rawY = hand[WRIST_INDEX].y;
-            const remappedY = (rawY - Y_TOP_MARGIN) / (1 - Y_TOP_MARGIN);
+            const thumb = hand[THUMB_TIP];
+            const index = hand[INDEX_TIP];
+            const palm = hand[MIDDLE_MCP];
+            const remappedY = (palm.y - Y_TOP_MARGIN) / (1 - Y_TOP_MARGIN);
+            const pinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
             return {
-              x: hand[WRIST_INDEX].x,
-              y: Math.max(0, Math.min(1, remappedY))
+              x: palm.x,
+              y: Math.max(0, Math.min(1, remappedY)),
+              pinching: pinchDist < PINCH_THRESHOLD
             };
           });
           setHandPositions(positions);
+          setRawLandmarks(landmarks);
         } else {
           setHandPositions([]);
+          setRawLandmarks([]);
         }
       } catch (error) {
         console.error('Hand detection error:', error);
@@ -108,5 +118,5 @@ export function useHandCenterTrigger(options = {}) {
     };
   }, [enabled]);
 
-  return { handPositions };
+  return { handPositions, rawLandmarks, videoRef };
 }

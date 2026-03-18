@@ -157,7 +157,7 @@ export function LiquidPour({ isPouring = false }) {
 
   const discsGroupRef = useRef();
   const DISCS_UP_Y = 1.35;
-  const DISCS_DOWN_Y = 0.9;
+  const DISCS_DOWN_Y = 1;
   const discsYRef = useRef(DISCS_DOWN_Y);
   const DISCS_LERP_DOWN = 2.8;
   const DISCS_LERP_UP = 0.9;
